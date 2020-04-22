@@ -259,7 +259,7 @@ void dfs2(int u, int to)
 	for (int i=head[u];~i;i=edge[i].next)
 	{
         int v=edge[i].to;
-        if(v==fa[u]||v==son[u])
+        if(v==f[u]||v==son[u])
             continue;
 		dfs2(v, v);
 	}
@@ -388,6 +388,27 @@ int queryy(int y, int lz, int rz)
 
 #  数论
 
+## 扩展欧几里得
+
+$$
+ax+by=\gcd(a,b)\\
+\frac{ac}{\gcd(a,b)}x+\frac{bc}{\gcd(a,b)}y=c\\
+当且仅当\gcd(a,b)|c有解
+$$
+
+
+
+```c++
+ll exgcd(ll a, ll b, ll& x, ll& y) {
+	if (b == 0) { x = 1, y = 0; return a; }
+	ll r = exgcd(b, a % b, x, y), tmp;
+	tmp = x; x = y; y = tmp - (a / b) * y;
+	return r;
+}
+```
+
+
+
 ##  扩展中国剩余定理
 
 $$
@@ -395,36 +416,36 @@ x\equiv c_i(\mod m_i)
 $$
 
 ```c++
-const LL MAXN = 1e6 + 10;
-LL K, C[MAXN], M[MAXN], x, y;
-LL gcd(LL a, LL b) {
+const ll maxn = 1e6 + 10;
+ll K, C[maxn], M[maxn], x, y;
+ll gcd(ll a, ll b) {
 	return b == 0 ? a : gcd(b, a % b);
 }
-LL exgcd(LL a, LL b, LL& x, LL& y) {
+ll exgcd(ll a, ll b, ll& x, ll& y) {
 	if (b == 0) { x = 1, y = 0; return a; }
-	LL r = exgcd(b, a % b, x, y), tmp;
+	ll r = exgcd(b, a % b, x, y), tmp;
 	tmp = x; x = y; y = tmp - (a / b) * y;
 	return r;
 }
-LL inv(LL a, LL b) {
-	LL r = exgcd(a, b, x, y);
+ll inv(ll a, ll b) {
+	ll r = exgcd(a, b, x, y);
 	while (x < 0) x += b;
 	return x;
 }
-int main() {	while (~scanf("%lld", &K)) {
-		for (LL i = 1; i <= K; i++) scanf("%lld%lld", &M[i], &C[i]);
-		bool flag = 1;
-		for (LL i = 2; i <= K; i++) {
-			LL M1 = M[i - 1], M2 = M[i], C2 = C[i], C1 = C[i - 1], T = gcd(M1, M2);
-			if ((C2 - C1) % T != 0) { flag = 0; break; }
-			M[i] = (M1 * M2) / T;
-			C[i] = (inv(M1 / T, M2 / T) * (C2 - C1) / T) % (M2 / T) * M1 + C1;
-			C[i] = (C[i] % M[i] + M[i]) % M[i];
-		}
-		printf("%lld\n", flag ? C[K] : -1);
-	}
-	return 0;
+
+ll excrt(ll M[], ll C[], ll K)
+{
+    bool flag = 1;
+    for (ll i = 2; i <= K; i++) {
+        ll M1 = M[i - 1], M2 = M[i], C2 = C[i], C1 = C[i - 1], T = gcd(M1, M2);
+        if ((C2 - C1) % T != 0) { flag = 0; break; }
+        M[i] = (M1 * M2) / T;//此处溢出
+        C[i] = (inv(M1 / T, M2 / T) * (C2 - C1) / T) % (M2 / T) * M1 + C1;//此处溢出
+        C[i] = (C[i] % M[i] + M[i]) % M[i];
+    }
+    return flag ? C[K] : -1;
 }
+
 ```
 
 ##  线性递推逆元
@@ -748,7 +769,365 @@ $$
 
 
 
+## factor类
+
+```c++
+namespace Factor {
+	const int N=1010000;
+	ll C,fac[10010],n,mut,a[1001000];
+	int T,cnt,i,l,prime[N],p[N],psize,_cnt;
+	ll _e[100],_pr[100];
+	vector<ll> d;
+	inline ll mul(ll a,ll b,ll p) {
+		if (p<=1000000000) return a*b%p;
+		else if (p<=1000000000000ll) return (((a*(b>>20)%p)<<20)+(a*(b&((1<<20)-1))))%p;
+		else {
+			ll d=(ll)floor(a*(long double)b/p+0.5);
+			ll ret=(a*b-d*p)%p;
+			if (ret<0) ret+=p;
+			return ret;
+		}
+	}
+	void prime_table(){
+		int i,j,tot,t1;
+		for (i=1;i<=psize;i++) p[i]=i;
+		for (i=2,tot=0;i<=psize;i++){
+			if (p[i]==i) prime[++tot]=i;
+			for (j=1;j<=tot && (t1=prime[j]*i)<=psize;j++){
+				p[t1]=prime[j];
+				if (i%prime[j]==0) break;
+			}
+		}
+	}
+	void init(int ps) {
+		psize=ps;
+		prime_table();
+	}
+	ll powl(ll a,ll n,ll p) {
+		ll ans=1;
+		for (;n;n>>=1) {
+			if (n&1) ans=mul(ans,a,p);
+			a=mul(a,a,p);
+		}
+		return ans;
+	}
+	bool witness(ll a,ll n) {
+		int t=0;
+		ll u=n-1;
+		for (;~u&1;u>>=1) t++;
+		ll x=powl(a,u,n),_x=0;
+		for (;t;t--) {
+			_x=mul(x,x,n);
+			if (_x==1 && x!=1 && x!=n-1) return 1;
+			x=_x;
+		}
+		return _x!=1;
+	}
+	bool miller(ll n) {
+		if (n<2) return 0;
+		if (n<=psize) return p[n]==n;
+		if (~n&1) return 0;
+		for (int j=0;j<=7;j++) if (witness(rand()%(n-1)+1,n)) return 0;
+		return 1;
+	}
+	ll gcd(ll a,ll b) {
+		ll ret=1;
+		while (a!=0) {
+			if ((~a&1) && (~b&1)) ret<<=1,a>>=1,b>>=1;
+			else if (~a&1) a>>=1; else if (~b&1) b>>=1;
+			else {
+				if (a<b) swap(a,b);
+				a-=b;
+			}
+		}
+		return ret*b;
+	}
+	ll rho(ll n) {
+		for (;;) {
+			ll X=rand()%n,Y,Z,T=1,*lY=a,*lX=lY;
+			int tmp=20;
+			C=rand()%10+3;
+			X=mul(X,X,n)+C;*(lY++)=X;lX++;
+			Y=mul(X,X,n)+C;*(lY++)=Y;
+			for(;X!=Y;) {
+				ll t=X-Y+n;
+				Z=mul(T,t,n);
+				if(Z==0) return gcd(T,n);
+				tmp--;
+				if (tmp==0) {
+					tmp=20;
+					Z=gcd(Z,n);
+					if (Z!=1 && Z!=n) return Z;
+				}
+				T=Z;
+				Y=*(lY++)=mul(Y,Y,n)+C;
+				Y=*(lY++)=mul(Y,Y,n)+C;
+				X=*(lX++);
+			}
+		}
+	}
+	void _factor(ll n) {
+		for (int i=0;i<cnt;i++) {
+			if (n%fac[i]==0) n/=fac[i],fac[cnt++]=fac[i];}
+		if (n<=psize) {
+			for (;n!=1;n/=p[n]) fac[cnt++]=p[n];
+			return;
+		}
+		if (miller(n)) fac[cnt++]=n;
+		else {
+			ll x=rho(n);
+			_factor(x);_factor(n/x);
+		}
+	}
+	void dfs(ll x,int dep) {
+		if (dep==_cnt) d.pb(x);
+		else {
+			dfs(x,dep+1);
+			for (int i=1;i<=_e[dep];i++) dfs(x*=_pr[dep],dep+1);
+		}
+	}
+	void norm() {
+		sort(fac,fac+cnt);
+		_cnt=0;
+		rep(i,0,cnt) if (i==0||fac[i]!=fac[i-1]) _pr[_cnt]=fac[i],_e[_cnt++]=1;
+			else _e[_cnt-1]++;
+	}
+	vector<ll> getd() {
+		d.clear();
+		dfs(1,0);
+		return d;
+	}
+	vector<ll> factor(ll n) {
+		cnt=0;
+		_factor(n);
+		norm();
+		return getd();
+	}
+	vector<PLL> factorG(ll n) {
+		cnt=0;
+		_factor(n);
+		norm();
+		vector<PLL> d;
+		rep(i,0,_cnt) d.pb(mp(_pr[i],_e[i]));
+		return d;
+	}
+	bool is_primitive(ll a,ll p) {
+		assert(miller(p));
+		vector<PLL> D=factorG(p-1);
+		rep(i,0,SZ(D)) if (powl(a,(p-1)/D[i].fi,p)==1) return 0;
+		return 1;
+	}
+}
+```
+
+## 快速乘
+
+```c++
+inline ll mul(ll a,ll b,ll p)
+{
+    if (p<=1000000000)
+        return a * b % p;
+    else if (p<=1000000000000ll)
+        return (((a * (b >> 20) % p) << 20) + (a * (b & ((1 << 20) - 1)))) % p;
+    else {
+        ll d=(ll)floor(a*(long double)b/p+0.5);
+        ll ret=(a*b-d*p)%p;
+        if (ret<0) ret+=p;
+        return ret;
+    }
+}
+```
+
+
+
+## Miller Rabin
+
+```c++
+inline ll qmod(ll a, ll n, ll p)
+{
+    ll ans = 1;
+    while(n)
+    {
+        if(n&1)
+            ans = mul(ans, a, p);
+        a = mul(a, a, p);
+        n >>= 1;
+    }
+    return ans;
+}
+
+bool millerRabin(ll n)
+{
+    if (n < 3)
+        return n == 2;
+    ll a = n - 1, b = 0;
+    for (; ~a & 1; a >>= 1, ++b);
+    for (int i = 1, j; i <= 8; ++i)
+    {
+        ll x = 2 + rand() % (n - 2), v = qmod(x, a, n);
+        if (v == 1 || v == n - 1)
+            continue;
+        for (j = 0; j < b; ++j)
+        {
+            v = mul(v, v, n);
+            if(v==n-1)break;
+        }
+        if (j >= b)
+            return 0;
+    }
+    return 1;
+}
+```
+
+## Pollard rho
+
+```c++
+inline ll Pollard_rho(ll x)
+{
+    ll s = 0, t = 0, c = 1 + 1ll * rand() * rand() * rand() * rand() % (x - 1);
+    int stp = 0, goal = 1;
+    ll val = 1;
+    for (goal = 1;; goal <<= 1, s = t, val = 1)
+    {
+        for (stp = 1; stp <= goal; ++stp)
+        {
+            t = (mul(t, t, x) + c) % x;
+            val = mul(val, abs(t - s), x);
+            if ((stp % 127) == 0)
+            {
+                ll d = gcd(val, x);
+                if(d>1)
+                    return d;
+            }
+        }
+        ll d = gcd(val, x);
+        if(d>1)
+            return d;
+    }
+}
+map<ll,ll> fac;//分解质因数
+void factor(ll x)
+{
+    if(x<2)return;
+    if(millerRabin(x))
+    {
+        fac[x]++;
+        return;
+    }
+    ll p=x;
+    while(p>=x)
+        p=Pollard_rho(p);
+    slove(p),slove(x/p);
+}
+```
+
+## lucas
+
+```c++
+ll lucas(ll n, ll m, ll p)
+{
+    if (m == 0)
+        return 1;
+    return C(n % p, m % p, p) * lucas(n / p, m / p, p) % p;
+}
+```
+
+## 扩展lucas
+
+```c++
+inline ll F(ll n,ll P,ll PK){
+    if (n==0) return 1;
+    ll rou=1;//循环节
+    ll rem=1;//余项 
+    for (ll i=1;i<=PK;i++){
+        if (i%P) rou=rou*i%PK;
+    }
+    rou=qmod(rou,n/PK,PK);
+    for (ll i=PK*(n/PK);i<=n;i++){
+        if (i%P) rem=rem*(i%PK)%PK;
+    }
+    return F(n/P,P,PK)*rou%PK*rem%PK;
+}
+inline ll G(ll n,ll P){
+    ll ans=0;
+    while(n>=P)
+    {
+        ans+=n/P;
+        n/=P;
+    }
+    return ans;
+}
+inline ll C_PK(ll n,ll m,ll P,ll PK){
+    ll fz=F(n,P,PK),fm1=inv(F(m,P,PK),PK),fm2=inv(F(n-m,P,PK),PK);
+    ll mi=qmod(P,G(n,P)-G(m,P)-G(n-m,P),PK);
+    return fz*fm1%PK*fm2%PK*mi%PK;
+}
+ll A[1001],B[1001];
+//x=B(mod A)
+inline ll exLucas(ll n,ll m,ll P){
+    ll ljc=P,tot=0;
+    for (ll tmp=2;tmp*tmp<=P;tmp++){
+        if (!(ljc%tmp)){
+            ll PK=1;
+            while (!(ljc%tmp)){
+                PK*=tmp;ljc/=tmp;
+            }
+            A[++tot]=PK;B[tot]=C_PK(n,m,tmp,PK);
+        }
+    }
+    if (ljc!=1){
+        A[++tot]=ljc;B[tot]=C_PK(n,m,ljc,ljc);
+    }
+    ll ans=0;
+    for (ll i=1;i<=tot;i++){
+        ll M=P/A[i],T=inv(M,A[i]);
+        ans=(ans+B[i]*M%P*T%P)%P;
+    }
+    return ans;
+}
+```
+
+
+
+
+
 #  多项式
+
+## 高斯消元
+
+```c++
+const double eps = 1e-8;
+const int maxn = 110;
+double a[maxn][maxn];
+bool gass(int n)
+{
+    for (int i = 0; i < n; ++i)
+    {
+        int pov = i;
+        for (int j = i + 1; j < n; ++j)
+            if (fabs(a[j][i]) > fabs(a[pov][i]))
+                pov = j;
+        for (int j = 0; j <= n; ++j)
+            swap(a[i][j], a[pov][j]);
+        if (fabs(a[i][i]) <= eps)
+            return 0;
+        for (int j = 0; j < n; ++j)
+        {
+            if (j != i)
+            {
+                double ret = a[j][i] / a[i][i];
+                for (int k = i + 1; k <= n; ++k)
+                    a[j][k] -= a[i][k] * ret;
+            }
+        }
+    }
+    for (int i = 0; i < n; ++i)
+        a[i][n] /= a[i][i];
+    return 1;
+}
+```
+
+
 
 ##  拉格朗日插值
 
@@ -854,30 +1233,26 @@ void init(int len)
         r[i] = (r[i >> 1] >> 1) | ((i & 1) << (l - 1));
     }
 }
-void change(comp y[],int len)
+
+void DFT(comp y[],int len,int rev)//rev=1为DFT；-1为IDFT，逆变换；
 {
     for (int i = 0; i < len; ++i)
     {
         if(i<r[i])
             swap(y[i], y[r[i]]);
     }
-}
-
-void DFT(comp y[],int len,int rev)//rev=1为DFT；-1为IDFT，逆变换；
-{
-    change(y,len);
-    for(int h = 2; h <= len; h <<= 1)
+    for(int h = 1; h < len; h <<= 1)
     {
-        comp wn(cos(2 * PI / h), sin(rev * 2 * PI / h));
-        for (int j = 0; j < len; j += h)
+        comp wn(cos(PI / h), rev * sin(PI / h));
+        for (int d = (h << 1), j = 0; j < len; j += d)
         {
             comp w(1,0);
-            for (int k = j; k < j + h / 2; k++)
+            for (int k = j; k < j + h; k++)
             {
                 comp u = y[k];
-                comp t = w*y[k+h/2];
-                y[k] = u+t;
-                y[k+h/2] = u-t;
+                comp t = w * y[k + h];
+                y[k] = u + t;
+                y[k + h] = u - t;
                 w = w * wn;
             }
         }
@@ -893,7 +1268,11 @@ void DFT(comp y[],int len,int rev)//rev=1为DFT；-1为IDFT，逆变换；
 ```c++
 void NTT(ll y[],int len,int rev)
 {
-    change(y,len);
+    for (int i = 0; i < len; ++i)
+    {
+        if(i<r[i])
+            swap(y[i], y[r[i]]);
+    }
     for(int h = 2; h <= len; h <<= 1)
     {
         ll wn = qmod(3, (mod - 1) / h);
@@ -1432,6 +1811,80 @@ int main()
 
 ```
 
+## 曼哈顿最小生成树
+
+```c++
+struct POINT
+{
+    int x, y, id;
+} point[maxn], temp[maxn];
+struct BIT
+{
+    int _N;
+    pii bit[maxn];
+    void init(int n)
+    {
+        _N = n;
+        for (int i = 1; i <= n; ++i)
+        {
+            bit[i] = pii(inf, -1);
+        }
+    }
+
+    void update(int k,pii v)
+    {
+        for (; k > 0; k -= lowbit(k))
+        {
+            bit[k] = min(bit[k], v);
+        }
+    }
+
+    pii query (int k)
+    {
+        pii res(inf, -1);
+        for (; k <= _N; k += lowbit(k))
+        {
+            res = min(res, bit[k]);
+        }
+        return res;
+    }
+} bit;
+
+int b[maxn];
+void manhattan_mst(POINT p[], int n)
+{
+    for (int cas = 0; cas < 4; ++cas)
+    {
+        if (cas == 1 || cas == 3)
+            for (int i = 0; i < n; ++i)
+                swap(p[i].x, p[i].y);
+        else if (cas == 2)
+            for (int i = 0; i < n; ++i)
+                p[i].x = -p[i].x;
+        for (int i = 0; i < n; ++i)
+        {
+            b[i] = p[i].y - p[i].x;
+        }
+        sort(b, b + n);
+        int m = unique(b, b + n) - b;
+        sort(p, p + n, [](POINT a, POINT b) {
+            return a.x == b.x ? a.y > b.y : a.x > b.x;
+        });
+        bit.init(m);
+        for (int i = 0; i < n; ++i)
+        {
+            int l = lower_bound(b, b + m, p[i].y - p[i].x) - b;
+            pii res = bit.query(l + 1);
+            if (res.second != -1)
+                edge[tot++] = {p[i].id, res.second, res.first - p[i].x - p[i].y};
+            bit.update(l + 1, pii(p[i].x + p[i].y, p[i].id));
+        }
+    }
+}
+```
+
+
+
 #  计算几何
 
 ## 三点定圆
@@ -1504,9 +1957,78 @@ Point GetCenter(const Point& p1, const Point& p2, const Point& p3)//求三点圆
 
 ```
 
+## 平面最近点对
+
+```c++
+const int maxn = 1e5 + 10;
+struct point
+{
+    double x, y;
+} p[maxn];
+
+double dis(point a,point b)
+{
+    return sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
+}
+bool cmpx(point a,point b)
+{
+    return a.x < b.x;
+}
+bool cmpy(point a,point b)
+{
+    return a.y < b.y;
+}
+double cal(point a[],int len)
+{
+    if(len==1)
+        return inf;
+    if(len==2)
+        return dis(a[0], a[1]);
+    double p = a[len / 2 - 1].x;
+    int mid = len / 2;
+    double d = min(cal(a, mid), cal(a + mid, len - mid));
+    int tot = 0;
+    for (int i = 0; i < len; ++i)
+        if (fabs(p - a[i].x) <= d)
+            swap(a[tot++], a[i]);
+    sort(a, a + tot, cmpy);
+    for (int i = 0; i < tot; ++i)
+    {
+        for (int j = i + 1; j < tot; ++j)
+        {
+            if (a[j].y - a[i].y > d)
+                break;
+            d = min(d, dis(a[i], a[j]));
+        }
+    }
+    return d;
+}
+
+int main()
+{
+    int n;
+    read(n);
+    for (int i = 0; i < n; ++i)
+    {
+        scanf("%lf%lf", &p[i].x, &p[i].y);
+    }
+    sort(p, p + n, cmpx);
+    printf("%.6f\n", cal(p, n));
+}
+```
+
+
+
 # 其它
 
 ## 关于括号匹配
 
 1.  取**‘（’**为1，**‘）’**为-1，若序列每个前缀和均非负，切总和为0，则括号可成功匹配
 2.  接上条，对于总和为0的匹配序列，序列中前缀和最小值的个数即为循环匹配的个数
+
+## n个数全不在自己位置上的匹配
+
+$$
+f(n+1)=nf(n)+nf(n-1)
+$$
+
