@@ -104,7 +104,9 @@ int query(int l, int r, int lt, int rt, int k)
 
 ```
 
-##  Splay
+##  平衡树
+
+### splay
 
 ```c++
 const int maxn = 1e5 + 10;
@@ -233,9 +235,178 @@ inline int kth(int x)
 
 ```
 
-##  树链剖分
+### treap
+
+at_rank要+1,get_rank要-1，因为最小值是-inf
 
 ```c++
+const int maxn = 1e5 + 10;
+int tot;
+int ch[maxn][2];
+int val[maxn], dat[maxn];
+int sz[maxn], cnt[maxn];
+int root;
+
+int newnode(int v)
+{
+    val[++tot] = v;
+    dat[tot] = rand();
+    sz[tot] = 1;
+    cnt[tot] = 1;
+    return tot;
+}
+
+void pushup(int x)
+{
+    sz[x] = sz[ch[x][0]] + sz[ch[x][1]] + cnt[x];
+}
+
+void init()
+{
+    root = newnode(-inf);
+    ch[root][1] = newnode(inf);
+    pushup(root);
+}
+
+void Rot(int &id, int d)
+{
+    int temp = ch[id][d ^ 1];
+    ch[id][d ^ 1] = ch[temp][d];
+    ch[temp][d] = id;
+    id = temp;
+    pushup(ch[id][d]);
+    pushup(id);
+}
+
+void insert(int &id,int v)
+{
+    if (!id)
+    {
+        id = newnode(v);
+        return;
+    }
+    if(v==val[id])
+        cnt[id]++;
+    else
+    {
+        int d = !(v < val[id]);
+        insert(ch[id][d], v);
+        if (dat[id] < dat[ch[id][d]])
+            Rot(id, d ^ 1);
+    }
+    pushup(id);
+}
+
+void del(int &id, int v)
+{
+    if(!id)
+        return;
+    if (v == val[id])
+    {
+        if (cnt[id] > 1)
+        {
+            --cnt[id];
+            pushup(id);
+            return;
+        }
+        if (ch[id][0] || ch[id][1])
+        {
+            if (!ch[id][1] || dat[ch[id][0]] > dat[ch[id][1]])
+            {
+                Rot(id, 1);
+                del(ch[id][1], v);
+            }else
+            {
+                Rot(id, 0);
+                del(ch[id][0], v);
+            }
+            pushup(id);
+        }else
+        {
+            id = 0;
+        }
+        return;
+    }
+    if(v<val[id])
+        del(ch[id][0], v);
+    else
+        del(ch[id][1], v);
+    pushup(id);
+    return;
+}
+
+int get_rank(int id, int v)
+{
+    if(!id)
+        return 0;
+    if (v == val[id])
+        return sz[ch[id][0]] + 1;
+    else if (v < val[id])
+        return get_rank(ch[id][0], v);
+    else
+        return sz[ch[id][0]] + cnt[id] + get_rank(ch[id][1], v);
+}
+
+int at_rank(int id, int k)
+{
+    if(!id)
+        return inf;
+    if (k <= sz[ch[id][0]])
+        return at_rank(ch[id][0], k);
+    else if (k <= sz[ch[id][0]] + cnt[id])
+        return val[id];
+    else
+        return at_rank(ch[id][1], k - sz[ch[id][0]] - cnt[id]);
+}
+
+int get_next(int v)
+{
+    int cur = root, res;
+    while (cur)
+    {
+        if (val[cur] > v)
+        {
+            res = val[cur];
+            cur = ch[cur][0];
+        }else
+        {
+            cur = ch[cur][1];
+        }
+    }
+    return res;
+}
+
+int get_pre(int v)
+{
+    int cur = root, res;
+    while (cur)
+    {
+        if (val[cur] < v)
+        {
+            res = val[cur];
+            cur = ch[cur][1];
+        }else
+        {
+            cur = ch[cur][0];
+        }
+    }
+    return res;
+}
+```
+
+
+
+##  树链剖分
+
+$$
+直径d=\max\{dis_{u,v},dis_{u,p},dis_{v,p}\}\\
+u,v为原直径，p为新增点
+$$
+
+
+
+```c++
+int dep[maxn], sz[maxn], f[maxn], son[maxn], top[maxn], dfn[maxn], idx;
 void dfs1(int u,int pre,int d)
 {
 	f[u] = pre;
@@ -253,7 +424,7 @@ void dfs1(int u,int pre,int d)
 void dfs2(int u, int to)
 {
 	top[u] = to;
-	dfn[u] = ++cnt;
+	dfn[u] = ++idx;
 	if(son[u])
 		dfs2(son[u], to);
 	for (int i=head[u];~i;i=edge[i].next)
@@ -385,6 +556,27 @@ int queryy(int y, int lz, int rz)
     return res;
 }
 ```
+
+## 单调栈求最大矩阵
+
+```c++
+ if (top <= 0 || stk[top].second <= pre[i][j])
+ {
+     stk[++top] = pii(j, pre[i][j]);
+ }else
+ {
+     ll w;
+     while (top > 0 && stk[top].second > pre[i][j])
+     {
+         w = stk[top].first;
+         res = max(stk[top].second * (j - w), res);
+         --top;
+     }
+     stk[++top] = pii(w, pre[i][j]);
+ }        
+```
+
+
 
 #  数论
 
@@ -1299,6 +1491,213 @@ void NTT(ll y[],int len,int rev)
 }
 ```
 
+## 多项式求逆
+
+```c++
+ll temp[maxn];
+void inv(ll a[], ll inva[], ll n)
+{
+    ll lim = 1;
+    while (lim < n)
+        lim <<= 1;
+    inva[0] = qmod(a[0], mod - 2);
+    for (ll len = 1; len <= lim; len <<= 1)
+    {
+        init(len << 1);
+        for (int i = 0; i < len; ++i)
+        {
+            temp[i] = a[i];
+            temp[i + len] = 0;
+        }
+        NTT(temp, len << 1, 1);
+        NTT(inva, len << 1, 1);
+        for (int i = 0; i < (len << 1); ++i)
+            inva[i] = (2ll - temp[i] * inva[i] % mod + mod) % mod * inva[i] % mod;
+        NTT(inva, len << 1, -1);
+        for (int i = 0; i < len; ++i)
+            inva[i + len] = 0;
+    }
+}
+
+```
+
+## 多项式除法|取模
+
+```c++
+void mul(ll x[], int n, ll y[], int m, ll res[])
+{
+    int len = 1;
+    while (len < n + m - 1)
+        len <<= 1;
+    for (int i = n; i < len; ++i)
+        x[i] = 0;
+    for (int i = m; i < len; ++i)
+        y[i] = 0;
+    init(len);
+    NTT(x, len, 1);
+    NTT(y, len, 1);
+    for (int i = 0; i < len; ++i)
+        res[i] = x[i] * y[i] % mod;
+    NTT(res, len, -1);
+}
+ll temp1[maxn << 2], temp2[maxn << 2];
+//Q*G+R=F
+//Q: n-m+1,R: m-1
+void div(ll F[], int n, ll G[], int m, ll Q[], ll R[])
+{
+    for (int i = 0; i < n; ++i)
+        temp1[i] = F[i];
+    reverse(temp1, temp1 + n);
+    reverse(G, G + m);
+    inv(G, temp2, n - m + 1);
+    reverse(G, G + m);
+    mul(temp1, n, temp2, n - m + 1, Q);
+    reverse(Q, Q + n - m + 1);
+    for (int i = 0; i < n - m + 1; ++i)
+        temp1[i] = Q[i];
+    for (int i = 0; i < m; ++i)
+        temp2[i] = G[i];
+    mul(temp1, n - m + 1, temp2, m, R);
+    for (int i = 0; i < m - 1; ++i)
+        R[i] = (F[i] - R[i] + mod) % mod;
+}
+```
+
+## 线性递推
+
+线性递推可用
+
+k项线性递推求第 n项,复杂度
+$$
+O(k^2\log(n))
+$$
+
+```c++
+
+namespace linear_seq {
+    const int N=10010;
+    ll res[N],base[N],_c[N],_md[N];
+ 
+    vector<int> Md;
+    void mul(ll *a,ll *b,int k) {
+        rep(i,0,k+k) _c[i]=0;
+        rep(i,0,k) if (a[i]) rep(j,0,k) _c[i+j]=(_c[i+j]+a[i]*b[j])%mod;
+        for (int i=k+k-1;i>=k;i--) if (_c[i])
+            rep(j,0,SZ(Md)) _c[i-k+Md[j]]=(_c[i-k+Md[j]]-_c[i]*_md[Md[j]])%mod;
+        rep(i,0,k) a[i]=_c[i];
+    }
+    int solve(ll n,VI a,VI b) {  /// a 系数 b 初值 b[n+1]=a[0]*b[n]+...
+        ll ans=0,pnt=0;
+        int k=SZ(a);
+        assert(SZ(a)==SZ(b));
+        rep(i,0,k) _md[k-1-i]=-a[i];_md[k]=1;
+        Md.clear();
+        rep(i,0,k) if (_md[i]!=0) Md.push_back(i);
+        rep(i,0,k) res[i]=base[i]=0;
+        res[0]=1;
+        while ((1ll<<pnt)<=n) pnt++;
+        for (int p=pnt;p>=0;p--) {
+            mul(res,res,k);
+            if ((n>>p)&1) {
+                for (int i=k-1;i>=0;i--) res[i+1]=res[i];res[0]=0;
+                rep(j,0,SZ(Md)) res[Md[j]]=(res[Md[j]]-res[k]*_md[Md[j]])%mod;
+            }
+        }
+        rep(i,0,k) ans=(ans+res[i]*b[i])%mod;
+        if (ans<0) ans+=mod;
+        return ans;
+    }
+    VI BM(VI s) {
+        VI C(1,1),B(1,1);
+        int L=0,m=1,b=1;
+        rep(n,0,SZ(s)) {
+            ll d=0;
+            rep(i,0,L+1) d=(d+(ll)C[i]*s[n-i])%mod;
+            if (d==0) ++m;
+            else if (2*L<=n) {
+                VI T=C;
+                ll c=mod-d*powmod(b,mod-2)%mod;
+                while (SZ(C)<SZ(B)+m) C.pb(0);
+                rep(i,0,SZ(B)) C[i+m]=(C[i+m]+c*B[i])%mod;
+                L=n+1-L; B=T; b=d; m=1;
+            } else {
+                ll c=mod-d*powmod(b,mod-2)%mod;
+                while (SZ(C)<SZ(B)+m) C.pb(0);
+                rep(i,0,SZ(B)) C[i+m]=(C[i+m]+c*B[i])%mod;
+                ++m;
+            }
+        }
+        return C;
+    }
+    int gao(VI a,ll n) {//下标从0开始
+        VI c=BM(a);
+        c.erase(c.begin());
+        rep(i,0,SZ(c)) c[i]=(mod-c[i])%mod;
+        return solve(n,c,VI(a.begin(),a.begin()+SZ(c)));
+    }
+};
+```
+
+
+
+# 组合数学
+
+## 卡特兰数
+
++   给出2n个元素，其中n个A元素，n个B元素，要求对于由两种元素按顺序排列组成的序列中，任意一个前缀B的数量不少于A,有多少种组合方式
++   n个节点的二叉树共有多少个
+    +   可以将一棵二叉树分为根，左子树，右子树三部分，枚举左子树节点个数
+
+$$
+C(n)=\frac{C_{2n}^{n}}{n+1}\\
+C(n)=\sum_{i=0}^{n-1}C(i)\times C(n-i-1)\\
+C(n+1)=\frac{4n+2}{n+2}C(n)\\
+C(n)=C_{2n}^{n}-C_{2n}^{n-1}
+$$
+
+## 斯特林数
+
+### 第一类斯特林数
+
+**把 n个不同的球排成 r个非空循环排列的方法数**
+$$
+S(n,r)=(n-1)S(n-1,r)+s(n-1,r-1)
+$$
+考虑最后一个球，它可以单独构成一个非空循环排列，也可以插入到前面的某一个球的一侧。
+
+若单独放，则有**S(n-1,r-1)** 种放法；若放在某个球的一侧，则有 **(n-1)S(n-1,r)**种放法。
+
+**S(n,r)**为多项式
+$$
+f_n(x)=\prod_{i=0}^{n-1}(x+i)
+$$
+的k次项系数，分治法+FFT/NTT可求
+
+### 第二类斯特林数
+
+**把n个不同的球放到r个相同的盒子里，方案数**
+$$
+S(n,r)=rS(n-1,r)+S(n-1,r-1)\\
+S(n,r)=\frac{1}{r!}\sum_{k=0}^{r}(-1)^kC_{r}^{k}(r-k)^n\\
+n^r=\sum_{i=0}^{r}S(r,i)\times i!\times C_{n}^{i}\\
+$$
+卷积形式
+$$
+\begin{align}S(n,m)&=\frac{1}{m!}\sum_{k=0}^{m}(-1)^k\frac{m!}{k!(m-k)!}(m-k)^n\\
+&=\sum_{k=0}^{m}\frac{(-1)^k}{k!}\frac{(m-k)^n}{(m-k)!}\\
+\end{align}
+$$
+令
+$$
+f(x)=\frac{(-1)^x}{x!}\\
+g_n(x)=\frac{(m-k)^n}{(m-k)!}
+$$
+则
+$$
+S(n,m)=\sum_{k=0}^kf(k)\times g_n(m-k)\\
+$$
+卷积形式，NTT求解
+
 # 字符串
 
 ##  后缀数组
@@ -1306,7 +1705,7 @@ void NTT(ll y[],int len,int rev)
 ```c++
 const int maxn = 1e5 + 10;
 char s[maxn];
-int x[maxn], y[maxn], sa[maxn], c[maxn], height[maxn], rak[maxn];
+int x[maxn], y[maxn], sa[maxn], c[maxn], height[maxn], rak[maxn];//rak[i],后缀i在排完序的数组里的排名，sa[i]排名为i的后缀在原串里的位置
 int st[maxn][20];
 int n, m;
 inline void getsa()
@@ -1376,11 +1775,24 @@ struct NODE
 	int ch[26];
 	int len, fa;
 	NODE() { memset(ch, 0, sizeof(ch)); len = 0; }
-}node[MAXN << 1];
+    // inline void clear()
+    // {
+    //     memset(ch, 0, sizeof ch);
+    //     len = fa = 0;
+    // }
+}node[maxn << 1];
 int las = 1, tot = 1;
+
+void init()//初始化
+{
+    las = tot = 1;
+    node[1].clear();
+}
+
 void add(int c)
 {
 	int p = las; int np = las = ++tot;
+    //node[np].clear();//用到时再清空，只需要初始化node[1]既可以快速初始化
 	node[np].len = node[p].len + 1;
 	for (; p && !node[p].ch[c]; p = node[p].fa)node[p].ch[c] = np;
 	if (!p)node[np].fa = 1;//以上为case 1
@@ -1588,7 +2000,7 @@ bool bfs(int s, int t)
 {
 	memset(dep, 0x3f, sizeof dep);
 	queue<int> q;
-	for (int i = 1; i <= n; ++i)cur[i] = head[i];
+	for (int i = 0; i <= n; ++i)cur[i] = head[i];
 	dep[s] = 0;
 	q.push(s);
 	while (!q.empty())
@@ -2026,7 +2438,7 @@ int main()
 1.  取**‘（’**为1，**‘）’**为-1，若序列每个前缀和均非负，切总和为0，则括号可成功匹配
 2.  接上条，对于总和为0的匹配序列，序列中前缀和最小值的个数即为循环匹配的个数
 
-## n个数全不在自己位置上的匹配
+## n个数全不在自己位置上的匹配/错排递推
 
 $$
 f(n+1)=nf(n)+nf(n-1)
