@@ -1281,7 +1281,15 @@ inline ll exLucas(ll n,ll m,ll P){
 
 
 
+## BSGS
 
+有$a^x\equiv b(\mod p)$,其中$\gcd(a,p)=1$,求$x$
+
+令$x=A\lceil\sqrt{p}\rceil-B$,其中$0\le A,B\le \lceil p \rceil$,则有$a^{A\lceil\sqrt{p}\rceil-B}\equiv B(\mod p)$,即有$a^{A\lceil\sqrt{p}\rceil}\equiv Ba^{B}(\mod p)$
+
+预处理出所有$a^{A\lceil p\rceil} \mod{p}$,枚举$B$
+
+最后$x$的取值为$A\lceil\sqrt{p}\rceil-B$
 
 #  多项式
 
