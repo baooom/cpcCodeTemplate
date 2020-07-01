@@ -560,20 +560,25 @@ int queryy(int y, int lz, int rz)
 ## 单调栈求最大矩阵
 
 ```c++
- if (top <= 0 || stk[top].second <= pre[i][j])
- {
-     stk[++top] = pii(j, pre[i][j]);
- }else
- {
-     ll w;
-     while (top > 0 && stk[top].second > pre[i][j])
-     {
-         w = stk[top].first;
-         res = max(stk[top].second * (j - w), res);
-         --top;
-     }
-     stk[++top] = pii(w, pre[i][j]);
- }        
+int ans = 0;
+pii v;
+for(int i = 1; i <= n; i++){
+	for(int j = 1; j <= m; j++){
+		if (s.empty() && !a[i][j]) continue;
+			
+		if (s.empty() || s.top().second <= a[i][j]) s.push(make_pair(j, a[i][j]));
+		else {
+			while(!s.empty() && s.top().second > a[i][j]){
+				v = s.top();
+				s.pop();
+				int area = (j-v.first)*v.second;
+				if (area > ans) ans = area;   
+			}
+			s.push(make_pair(v.first, a[i][j]));
+		}
+			
+	}
+}      
 ```
 
 
