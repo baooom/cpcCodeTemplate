@@ -46,6 +46,27 @@ using namespace std;
 
 #  数据结构
 
+## 线段树合并
+
+```c++
+int merge(int u, int v, int l, int r)
+{
+    if(!u)return v;if(!v)return u;
+    if (l == r)
+    {
+        val[u].first += val[v].first;
+        val[u].second = l;
+        return u;
+    }
+    int mid = l + r >> 1;
+    ls[u] = merge(ls[u], ls[v], l, mid);
+    rs[u] = merge(rs[u], rs[v], mid + 1, r);
+    pushup(u);
+    return u;
+}
+
+```
+
 ##  可持久化线段树
 
 ```c++
@@ -581,6 +602,22 @@ for(int i = 1; i <= n; i++){
 }      
 ```
 
+## 笛卡尔树
+
+```c++
+stk[top = 1] = 0;
+for (int i = 1; i <= n; ++i)
+{
+    read(p[i]);
+    while (top && p[i] < p[stk[top]])
+        l[i] = stk[top--];
+    if (top)
+        r[stk[top]] = i;
+    stk[++top] = i;
+}
+//笛卡尔树，小顶堆
+```
+
 
 
 #  数论
@@ -728,6 +765,8 @@ $$
 struct num {
 	ll x, y;
 };
+
+ll w;
 
 num mul(num a, num b, ll p)
 {
@@ -963,6 +1002,125 @@ f(x)=\sum_{i=1}^{x}g(i)\\
 S(n)=\sum_{i=1}^{n}\sum_{d|i}g(d)=\sum_{d=1}^{n}\sum_{k=1}^{\left\lfloor\frac{n}{d}\right\rfloor}g(k)=\sum_{d=1}^nf(\left\lfloor\frac{n}{d}\right\rfloor)\\
 f(x)=S(x)-\sum_{d=2}^nf(\left\lfloor\frac{n}{d}\right\rfloor)
 $$
+
+
+
+## min_25
+
+$$
+g(n,x)=\begin{cases}
+g(n,x-1)&p_x^2\gt n\\
+g(n,x-1)-f(p_x)\times\left[g(\left\lfloor\frac{n}{p_x}\right\rfloor,x-1)-\sum_{i\lt x}f(p_i)\right]&p_x^2\le n\\
+\end{cases}
+$$
+
+$S(n,x)=\sum{j=1}^n[min_j\gt p_x]f(j)$
+$$
+S(n,x)=g(n,\infty)-\sum_{i\le x}f(i)+\sum_{k\gt x}\sum_{p_k^e\le n}f(p_k^e)\times\left[S(\left\lfloor\frac{n}{p_k^e}\right\rfloor,k)+[e\gt 1]\right]
+$$
+
+```c++
+ll n, sqr;
+ll inv2 = 500000004, inv3 = 333333336;
+const int maxn = 1e6 + 10;
+ll Prime[maxn], tot;
+bool notPrime[maxn];
+int ref1[maxn], ref2[maxn];//因为n/pi只有根号个取值，映射一下
+ll g1[maxn], g2[maxn];//一次项函数值和二次项函数值
+ll sp1[maxn], sp2[maxn];//一次函数质数项前缀和，二次函数质数项前缀和
+ll w[maxn];
+
+ll qmod(ll a,ll n)
+{
+	ll ans = 1;
+	while(n)
+	{
+		if(n&1)
+			ans = ans * a % mod;
+		a = a * a % mod;
+		n >>= 1;
+	}
+	return ans;
+}
+
+void init(int lim)
+{
+    for (ll i = 2; i <= lim;++i)
+    {
+        if(!notPrime[i]){
+            Prime[++tot] = i;
+            sp1[tot] = (i + sp1[tot - 1]) % mod;
+            sp2[tot] = (i * i % mod + sp2[tot - 1]) % mod;
+        }
+        for (int j = 1; j <= tot && i * Prime[j] <= lim; ++j)
+        {
+            notPrime[i * Prime[j]] = 1;
+			if (i % Prime[j] == 0)
+				break;
+        }
+    }
+}
+int m;
+
+inline int ID(ll x)
+{
+    if (x <= sqr)
+        return ref1[x];
+    return ref2[n / x];
+}
+
+void initG()
+{
+    m = 0;
+    for (ll l = 1, r; l <= n; l = r + 1)//处理函数g(n,0),g1[i]=g1(n/i,0)=g2(w[i],0),g2[i]=g2(n/i,0)=g2(w[i],0)
+    {
+        r = n / (n / l);
+        w[++m] = n / l;
+        if (w[m] <= sqr)
+            ref1[w[m]] = m;
+        else
+            ref2[n / w[m]] = m;
+		ll ret = w[m] % mod;
+		g1[m] = ((1ll + ret) * ret / 2 % mod + mod - 1) % mod;
+		g2[m] = (ret * (ret + 1ll) / 2 % mod * (2 * ret + 1) % mod * inv3 % mod + mod - 1) % mod;
+	}
+    for (int j = 1; j <= tot; ++j)
+    {
+        for (int i = 1; i <= m; ++i)//处理g(n,j)
+        {
+            if (Prime[j] * Prime[j] > w[i])
+                break;
+			int k = ID(w[i] / Prime[j]);
+			g1[i] = g1[i] - Prime[j] * ((g1[k] - sp1[j - 1] + mod) % mod) % mod;
+			g2[i] = g2[i] - Prime[j] * Prime[j] % mod * ((g2[k] - sp2[j - 1] + mod) % mod) % mod;
+			g1[i] %= mod;
+			g2[i] %= mod;
+			if (g1[i] < 0)
+                g1[i] += mod;
+            if (g2[i] < 0)
+                g2[i] += mod;
+        }
+    }
+}
+
+ll S(ll x, ll y)
+{
+    if (Prime[y] >= x)
+        return 0;
+    ll k = ID(x);
+    ll ans = ((g2[k] - g1[k] + mod) % mod - (sp2[y] - sp1[y] + mod) % mod + mod) % mod;
+    for (int i = y + 1; i <= tot && Prime[i] * Prime[i] <= x; ++i)
+    {
+        ll pe = Prime[i];
+        for (ll e = 1; pe <= x; ++e, pe *= Prime[i])
+        {
+            ll xx = pe % mod;
+			ans = (ans + xx * (xx - 1) % mod * (S(x / pe, i) + (e != 1)) % mod) % mod;
+		}
+    }
+    return ans % mod;
+}
+```
 
 
 
@@ -1782,6 +1940,12 @@ inline int lcp(int x, int y)
 
 ##  后缀自动机(SAM)
 
+计算子串出现次数：对每个endpos大小进行累加
+
+endpos大小通过后缀链接，对每个不是复制的节点进行累加
+
+计算不同字串转移数量：对每个状态进行累加
+
 ```c++
 struct NODE
 {
@@ -1822,14 +1986,31 @@ void add(int c)
 		}
 	}
 }
+//注释部分为广义后缀自动机
 /*struct SAM
 {
 	int ch[maxn << 1][26];
 	int fa[maxn << 1], len[maxn << 1];
 	int las = 1, tot = 1;
-	void add(int c)
+	void init()
 	{
+		memset(ch[1], 0, sizeof ch[1]);
+		fa[1] = len[1] = 0;
+		las = tot = 1;
+	}
+
+	void clear(int p)
+	{
+		memset(ch[p], 0, sizeof ch[0]);
+		len[p] = fa[p] = 0;
+	}
+
+	void add(int c)//,int las)
+	{
+        //if(ch[las][c]&&len[las]+1==len[ch[las][c]])return ch[las][c];
 		int p = las; int np = las = ++tot;
+		//bool flag=0;
+		// clear(np);
 		len[np] = len[p] + 1;
 		for (; p && !ch[p][c]; p = fa[p])ch[p][c] = np;
 		if (!p)fa[np] = 1;
@@ -1839,6 +2020,7 @@ void add(int c)
 			if (len[q] == len[p] + 1)fa[np] = q;
 			else
 			{
+            	//if(len[p]+1==len[np])flag=1;
 				int nq = ++tot;
 				memcpy(ch[nq], ch[q], sizeof ch[nq]);
 				fa[nq] = fa[q];
@@ -1847,6 +2029,7 @@ void add(int c)
 				for (; p && ch[p][c] == q; p = fa[p])ch[p][c] = nq;
 			}
 		}
+		//return flag?nq:np;
 	}
 	int c[maxn << 1], b[maxn << 1];
 	inline void sort()
@@ -1856,6 +2039,17 @@ void add(int c)
 		for (int i = 1; i <= tot; ++i)b[c[len[i]]--] = i;
 	}
 };*/
+/*
+	for(int t=nextint();t--;)
+	{
+		int las=1;
+		for(int i=0;s[i];++i)
+		{
+			las=sam.add(s[i]-'a',las);
+		}
+	}
+*/
+
 char s[MAXN]; int len;
 int main()
 {
