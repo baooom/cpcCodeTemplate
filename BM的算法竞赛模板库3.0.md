@@ -1662,6 +1662,132 @@ void NTT(ll y[],int len,int rev)
 }
 ```
 
+## 快速沃尔什变换(FWT)
+
+**按位与**
+$$
+FWT[A]=MERGE(FWT[A_0],FWT[A_1]+FWT[A_0])\\
+UFWT[A]=MERGE(FWT[A_0],FWT[A_1]-FWT[A_0])
+$$
+
+```c++
+inline void fwtor(ll a[], int len, int inv)
+{
+	for (int l = 1; (l<<1) <= len; l<<=1)
+	{
+		for (int j = l << 1, i = 0; i < len; i += j)
+		{
+			for (int p = 0; p < l; ++p)
+			{
+				a[i + l + p] += a[i + p] * inv + mod;
+				a[i + l + p] %= mod;
+			}
+		}
+	}
+}
+```
+
+
+
+**按位或**
+$$
+FWT[A]=MERGE(FWT[A_0]+FWT[A_1],FWT[A_1])\\
+UFWT[A]=MERGE(FWT[A_0]-FWT[A_1],FWT[A_1])
+$$
+
+```c++
+inline void fwtand(ll a[], int len, int inv)
+{
+	for (int l = 1; (l<<1) <= len; l<<=1)
+	{
+		for (int j = l << 1, i = 0; i < len; i += j)
+		{
+			for (int p = 0; p < l; ++p)
+			{
+				a[i + p] += a[i + l + p] * inv + mod;
+				a[i + p] %= mod;
+			}
+		}
+	}
+}
+```
+
+
+
+**按位异或**
+$$
+FWT[A]=MERGE(FWT[A_0]+FWT[A_1],FWT[A_0]-FWT[A_1])\\
+UFWT[A]=MERGE(\frac{FWT[A_0]+FWT[A_1]}2,\frac{FWT[A_0]-FWT[A_1]}2)
+$$
+
+```c++
+inline void fwtxor(ll a[], int len, int inv)
+{
+	if (inv == -1)
+		inv = inv2;
+	for (int l = 1; (l<<1) <= len; l<<=1)
+	{
+		for (int j = l << 1, i = 0; i < len; i += j)
+		{
+			for (int p = 0; p < l; ++p)
+			{
+				a[i + p] += a[i + l + p];
+				a[i + l + p] = (a[i + p] - (a[i + l + p] << 1) % mod) % mod;
+
+				a[i + p] *= inv;
+				a[i + p] %= mod;
+				if (a[i + p] < 0)
+					a[i + p] += mod;
+
+				a[i + l + p] *= inv;
+				a[i + l + p] %= mod;
+				if (a[i + l + p] < 0)
+					a[i + l + p] += mod;
+			}
+		}
+	}
+}
+```
+
+
+
+**按位同或**
+$$
+FWT[A]=MERGE(FWT[A_1]-FWT[A_0],FWT[A_1]+FWT[A_0])\\
+UFWT[A]=MERGE(\frac{FWT[A_1]-FWT[A_0]}2,\frac{FWT[A_1]+FWT[A_0]}2)
+$$
+
+```c++
+inline void fwtxor(ll a[], int len, int inv)
+{
+	if (inv == -1)
+		inv = inv2;
+	for (int l = 1; (l<<1) <= len; l<<=1)
+	{
+		for (int j = l << 1, i = 0; i < len; i += j)
+		{
+			for (int p = 0; p < l; ++p)
+			{
+				a[i + l + p] += a[i + p];
+				a[i + p] = (a[i + l + p] - (a[i + p] << 1) % mod ) %mod;
+
+				a[i + p] *= inv;
+				a[i + p] %= mod;
+				if (a[i + p] < 0)
+					a[i + p] += mod;
+
+				a[i + l + p] *= inv;
+				a[i + l + p] %= mod;
+				if (a[i + l + p] < 0)
+					a[i + l + p] += mod;
+			}
+		}
+	}
+}
+```
+
+
+
 ## 多项式求逆
 
 ```c++
