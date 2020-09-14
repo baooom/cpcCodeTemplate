@@ -997,10 +997,10 @@ void init()
 ##  杜教筛
 
 $$
-g(x)为积性函数\\
+g(x),h(x)为积性函数\\
 f(x)=\sum_{i=1}^{x}g(i)\\
-S(n)=\sum_{i=1}^{n}\sum_{d|i}g(d)=\sum_{d=1}^{n}\sum_{k=1}^{\left\lfloor\frac{n}{d}\right\rfloor}g(k)=\sum_{d=1}^nf(\left\lfloor\frac{n}{d}\right\rfloor)\\
-f(x)=S(x)-\sum_{d=2}^nf(\left\lfloor\frac{n}{d}\right\rfloor)
+S(n)=\sum_{i=1}^{n}\sum_{d|i}g(d)h(\frac{n}{d})=\sum_{d=1}^{n}h(d)\sum_{k=1}^{\left\lfloor\frac{n}{d}\right\rfloor}g(k)=\sum_{d=1}^nh(d)f(\left\lfloor\frac{n}{d}\right\rfloor)\\
+f(x)=S(x)-\sum_{d=2}^nh(d)f(\left\lfloor\frac{n}{d}\right\rfloor)
 $$
 
 
@@ -1995,6 +1995,10 @@ S(n,m)=\sum_{k=0}^kf(k)\times g_n(m-k)\\
 $$
 卷积形式，NTT求解
 
+奇偶性判定：$(n-m)\&((m-1)/2)==0$奇数
+
+$(n-\lceil\frac{m}{2}\rceil)\&(\lfloor\frac{m}{2}\rfloor)==m$
+
 # 字符串
 
 ##  后缀数组
@@ -2307,6 +2311,9 @@ int zxbsf(string s)
 
 ## 网络流
 
+考虑条件 “任意$k$个子集的并的大小”$\geq k$ 如何用：这实际上保证了无论如何选择 元素个数$\geq$集合个数
+于是我们把元素的权值$-\infty$，集合的权值 $+\infty$ 在最优化的限制下只有当相等的时候才会被采纳为答案
+
 ###  Dinic
 
 ```c++
@@ -2441,6 +2448,89 @@ void mcmf(int s, int t)
     }
 }
 ```
+
+## Dijkstra费用流
+
+```c++
+inline void addedge(int u, int v, int c, int w)
+{
+    edge[tot] = {head[u], v, w, c};
+    head[u] = tot++;
+
+    edge[tot] = {head[v], u, 0, -c};
+    head[v] = tot++;
+}
+
+ll dis[maxn];
+int h[maxn];
+int n, m, s, t;
+bool vis[maxn];
+int preu[maxn], pree[maxn];
+inline void dijkstra(int s, int t)
+{
+	for (int i=1;i<=n;i++)
+	{
+        vis[i] = 0;
+        dis[i] = INF;
+    }
+    dis[s] = 0;
+    priority_queue<pii, vector<pii>, greater<pii>> q;
+    q.empty();
+	q.push(pii(0,s));
+	while (!q.empty())
+	{
+		pii rhs=q.top();
+		q.pop();
+		int u=rhs.second;
+		if (vis[u])
+			continue;
+        for (int i = head[u]; ~i; i = edge[i].next)
+        {
+            int v = edge[i].to;
+            if (edge[i].w > 0 && dis[v] > dis[u] + edge[i].c + h[u] - h[v])
+            {
+                dis[v] = dis[u] + edge[i].c + h[u] - h[v];
+                preu[v] = u;
+                pree[v] = i;
+                q.push(pii(dis[v], v));
+            }
+		}
+	}
+}
+ll flow = 0, cost = 0;
+inline void MinCostMaxFlow(int s, int t)
+{
+    memset(h, 0, sizeof(h));
+    flow = 0, cost = 0;
+    while (1)
+	{
+        dijkstra(s, t);
+        if (dis[t]==INF)
+			break;
+		else
+		{
+            for (int u = 1; u <= n; u++)
+                h[u] += dis[u];
+            ll delta = INF;
+            for (int u = t; u != s; u = preu[u])
+            {
+                int e = pree[u];
+                delta = min(delta, (ll)edge[e].w);
+            }
+            flow += delta;
+            cost += delta * h[t];
+            for (int u = t; u != s; u = preu[u])
+            {
+                int e = pree[u];
+                edge[e].w -= delta;
+                edge[e ^ 1].w += delta;
+            }
+		}
+	}
+}
+```
+
+
 
 ## 启发式搜索(K短路/A*)
 
